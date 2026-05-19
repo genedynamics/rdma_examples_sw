@@ -30,6 +30,11 @@ OBJ_FILES_SENDER_TCPIP_FULL=$(C_FILES_SENDER_TCPIP_FULL:.c=.o)
 C_FILES_RECEIVER_TCPIP_FULL=src/apps/rdma_receiver_sw_tcpip_full.c
 OBJ_FILES_RECEIVER_TCPIP_FULL=$(C_FILES_RECEIVER_TCPIP_FULL:.c=.o)
 
+C_FILES_SENDER_TCPIP_FULL_COYOTE=src/apps/rdma_sender_sw_tcpip_full_coyote.c
+OBJ_FILES_SENDER_TCPIP_FULL_COYOTE=$(C_FILES_SENDER_TCPIP_FULL_COYOTE:.c=.o)
+C_FILES_RECEIVER_TCPIP_FULL_COYOTE=src/apps/rdma_receiver_sw_tcpip_full_coyote.c
+OBJ_FILES_RECEIVER_TCPIP_FULL_COYOTE=$(C_FILES_RECEIVER_TCPIP_FULL_COYOTE:.c=.o)
+
 C_FILES_SENDER_ONETOMANY_TCPIP_FULL=src/apps/rdma_sender_onetomany_sw_tcpip_full.c
 OBJ_FILES_SENDER_ONETOMANY_TCPIP_FULL=$(C_FILES_SENDER_ONETOMANY_TCPIP_FULL:.c=.o)
 
@@ -46,7 +51,7 @@ OBJ_FILES_SENDER_ONETOMANY_STREAM_TCPIP_FULL=$(C_FILES_SENDER_ONETOMANY_STREAM_T
 # Targets
 
 .PHONY: all
-all: rdma_sender_sw_manual rdma_receiver_sw_manual rdma_sender_sw_tcpip rdma_receiver_sw_tcpip rdma_sender_sw_tcpip_full rdma_receiver_sw_tcpip_full rdma_sender_onetomany_sw_tcpip_full rdma_sender_sw_stream_tcpip_full rdma_receiver_sw_stream_tcpip_full rdma_receiver_sw_tstream_tcpip_full rdma_sender_onetomany_sw_stream_tcpip_full
+all: rdma_sender_sw_manual rdma_receiver_sw_manual rdma_sender_sw_tcpip rdma_receiver_sw_tcpip rdma_sender_sw_tcpip_full rdma_receiver_sw_tcpip_full rdma_sender_sw_tcpip_full_coyote rdma_receiver_sw_tcpip_full_coyote rdma_sender_onetomany_sw_tcpip_full rdma_sender_sw_stream_tcpip_full rdma_receiver_sw_stream_tcpip_full rdma_receiver_sw_tstream_tcpip_full rdma_sender_onetomany_sw_stream_tcpip_full
 
 rdma_sender_sw_manual: $(OBJ_FILES) $(OBJ_FILES_SENDER_MANUAL)
 	$(CC) $(FLAGS) $(LINK_FLAGS) $^ -o $@ $(LINK_LIBRARIES)
@@ -66,6 +71,12 @@ rdma_sender_sw_tcpip_full: $(OBJ_FILES) $(OBJ_FILES_SENDER_TCPIP_FULL)
 rdma_receiver_sw_tcpip_full: $(OBJ_FILES) $(OBJ_FILES_RECEIVER_TCPIP_FULL)
 	$(CC) $(FLAGS) $(LINK_FLAGS) $^ -o $@ $(LINK_LIBRARIES)
 
+rdma_sender_sw_tcpip_full_coyote: $(OBJ_FILES) $(OBJ_FILES_SENDER_TCPIP_FULL_COYOTE)
+	$(CC) $(FLAGS) $(LINK_FLAGS) $^ -o $@ $(LINK_LIBRARIES)
+
+rdma_receiver_sw_tcpip_full_coyote: $(OBJ_FILES) $(OBJ_FILES_RECEIVER_TCPIP_FULL_COYOTE)
+	$(CC) $(FLAGS) $(LINK_FLAGS) $^ -o $@ $(LINK_LIBRARIES)
+
 rdma_sender_onetomany_sw_tcpip_full: $(OBJ_FILES) $(OBJ_FILES_SENDER_ONETOMANY_TCPIP_FULL)
 	$(CC) $(FLAGS) $(LINK_FLAGS) $^ -o $@ $(LINK_LIBRARIES)
 
@@ -82,5 +93,5 @@ rdma_sender_onetomany_sw_stream_tcpip_full: $(OBJ_FILES) $(OBJ_FILES_SENDER_ONET
 	$(CC) $(FLAGS) $(LINK_FLAGS) $^ -o $@ $(LINK_LIBRARIES)
 
 clean:
-	rm -rf $(OBJ_FILES) $(OBJ_FILES_SENDER_MANUAL) $(OBJ_FILES_RECEIVER_MANUAL) $(OBJ_FILES_SENDER_TCPIP) $(OBJ_FILES_RECEIVER_TCPIP) $(OBJ_FILES_SENDER_TCPIP_FULL) $(OBJ_FILES_RECEIVER_TCPIP_FULL) $(OBJ_FILES_SENDER_ONETOMANY_TCPIP_FULL) $(OBJ_FILES_SENDER_STREAM_TCPIP_FULL) $(OBJ_FILES_RECEIVER_STREAM_TCPIP_FULL) $(OBJ_FILES_RECEIVER_TSTREAM_TCPIP_FULL) $(OBJ_FILES_SENDER_ONETOMANY_STREAM_TCPIP_FULL)
-	rm -rf rdma_sender_sw_manual rdma_receiver_sw_manual rdma_sender_sw_tcpip rdma_receiver_sw_tcpip rdma_sender_sw_tcpip_full rdma_receiver_sw_tcpip_full rdma_sender_onetomany_sw_tcpip_full rdma_sender_sw_stream_tcpip_full rdma_receiver_sw_stream_tcpip_full rdma_receiver_sw_tstream_tcpip_full rdma_sender_onetomany_sw_stream_tcpip_full
+	rm -rf $(OBJ_FILES) $(OBJ_FILES_SENDER_MANUAL) $(OBJ_FILES_RECEIVER_MANUAL) $(OBJ_FILES_SENDER_TCPIP) $(OBJ_FILES_RECEIVER_TCPIP) $(OBJ_FILES_SENDER_TCPIP_FULL) $(OBJ_FILES_RECEIVER_TCPIP_FULL) $(OBJ_FILES_SENDER_TCPIP_FULL_COYOTE) $(OBJ_FILES_RECEIVER_TCPIP_FULL_COYOTE) $(OBJ_FILES_SENDER_ONETOMANY_TCPIP_FULL) $(OBJ_FILES_SENDER_STREAM_TCPIP_FULL) $(OBJ_FILES_RECEIVER_STREAM_TCPIP_FULL) $(OBJ_FILES_RECEIVER_TSTREAM_TCPIP_FULL) $(OBJ_FILES_SENDER_ONETOMANY_STREAM_TCPIP_FULL)
+	rm -rf rdma_sender_sw_manual rdma_receiver_sw_manual rdma_sender_sw_tcpip rdma_receiver_sw_tcpip rdma_sender_sw_tcpip_full rdma_receiver_sw_tcpip_full rdma_sender_sw_tcpip_full_coyote rdma_receiver_sw_tcpip_full_coyote rdma_sender_onetomany_sw_tcpip_full rdma_sender_sw_stream_tcpip_full rdma_receiver_sw_stream_tcpip_full rdma_receiver_sw_tstream_tcpip_full rdma_sender_onetomany_sw_stream_tcpip_full

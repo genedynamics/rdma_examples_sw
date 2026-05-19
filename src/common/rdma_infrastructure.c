@@ -1,4 +1,5 @@
 #include "rdma_infrastructure.h"
+#include <ctype.h>
 
 
 int
@@ -33,6 +34,44 @@ gid_to_wire_gid(const union ibv_gid *gid, char wgid[])
 	for (i = 0; i < 4; ++i) {
 		sprintf(&wgid[i * 8], "%08x", htobe32(tmp_gid[i]));
   }
+}
+
+uint32_t
+readAck(int control_socket) {
+    debug_print("cThread: Called to read an ACK\n");
+
+    uint32_t ack;
+    if (read(control_socket, &ack, sizeof(uint32_t)) != sizeof(uint32_t)) {
+        close(control_socket);
+        debug_print("ERROR: Could not read ack\n");
+        exit(1);
+    }
+
+    return ack;
+}
+
+void
+sendAck(int control_socket, uint32_t ack) {
+    debug_print("cThread: Called to send an ACK\n");
+
+    if (write(control_socket, &ack, sizeof(uint32_t)) != sizeof(uint32_t))  {
+        close(control_socket);
+        debug_print("ERROR: Could not send ack\n");
+        exit(1);
+    }
+}
+
+void
+connSync(int control_socket, int client) {
+    debug_print("cThread: Called connSync for handshaking\n");
+
+    if (client) {
+        sendAck(control_socket, 0);
+        readAck(control_socket);
+    } else {
+        readAck(control_socket);
+        sendAck(control_socket, 0);
+    }
 }
 
 static void
@@ -116,7 +155,9 @@ rdma_prepare(struct rdma_config *config, int role)
     
     rdma_metadata = (char **)calloc(config->remote_count, sizeof(char *));
     for (i=0; i < config->remote_count; i++) {
-        (*(config->local_endpoint + i))->lid = config->rdma_ctx->portinfo.lid;
+        // For RoCE and Coyote, which are 100% of our use cases, LID is assumed to be always 0x0000.
+        (*(config->local_endpoint + i))->lid = 0;
+        // (*(config->local_endpoint + i))->lid = config->rdma_ctx->portinfo.lid;
         if (config->rdma_ctx->portinfo.link_layer != IBV_LINK_LAYER_ETHERNET && !(*(config->local_endpoint + i))->lid) {
             fprintf(stderr, "rdma_prepare: Couldn't get local LID\n");
             return NULL;
@@ -143,20 +184,52 @@ rdma_prepare(struct rdma_config *config, int role)
         (*(config->local_endpoint + i))->psn = rand() & 0xffffff;
         // (*(config->local_endpoint + i))->psn = (rand() & 0xffffff) + i;
         // (*(config->local_endpoint + i))->psn = (rand() & 0xffffff) + i * 10000;
+        (*(config->local_endpoint + i))->size = *(config->buffer_size + i);
 
+        // Coyote compatibility changes:
+        //
+        //
+        // 1.
+        // For RoCE and Coyote, which are 100% of our use cases, LID is assumed to be always 0x0000, so we don't send it anymore.
+        //
+        // In this case, the metadata string layout goes from:
+        // 78 = 4+1+6+1+6+1+8+1+16+1+32+1 (last one is the string terminator)
+        // to:
+        // 73 = 6+1+6+1+8+1+16+1+32+1 (last one is the string terminator) - LID removed
+        // to
+        // 82 = 6+1+6+1+8+1+16+1+8+1+32+1 (last one is the string terminator) - added allocated memory region size
+        //
+        //
+        // 2.
+        // For a more universal layout of the metadata string, instead of using different layouts for various situations,
+        // a single, maximal, format that can cover all cases is being introduced. This is so that
+        // both RDMA_WRITE and RDMA_READ, both SENDER and RECEIVER can use the same format and use only what is necessary
+        // for each particular situation.
+        //
+        // For example: if the R_KEY or VADDR fields make no sense for the current application, set them to 0 and fill the string with
+        // the appropriate number of 0s.
+        //
+        // The string format is:
+        // QPN:PSN:R_KEY:VADDR:SIZE:GID_STRING
+        // and is 0 terminated
+        //
+        // Use:
+        // %06x:%06x:%08x:%016lx:%08x:%s
+        // for sprintf and sscanf when working with it.
+        // 
         if (config->function == RDMA_WRITE && role == RDMA_RECEIVER) {
             (*(config->local_endpoint + i))->rkey = (*(config->rdma_ctx->mr + i))->rkey;
             (*(config->local_endpoint + i))->addr = (uint64_t)(*(config->rdma_ctx->mr + i))->addr;
-            *(rdma_metadata + i) = (char *)malloc(78); // 4+1+6+1+6+1+8+1+16+1+32+1 (last one is the string terminator)
-            memset(*(rdma_metadata + i), 0, 78);
-            snprintf(*(rdma_metadata + i), 78, "%04x:%06x:%06x:%08x:%016lx:%s", (*(config->local_endpoint + i))->lid, (*(config->local_endpoint + i))->qpn, (*(config->local_endpoint + i))->psn, (*(config->local_endpoint + i))->rkey, (*(config->local_endpoint + i))->addr, (*(config->local_endpoint + i))->gid_string);
-            debug_print("(RDMA_WRITE) local RDMA metadata for remote #%d: %s\n", i, *(rdma_metadata + i));
+            debug_print("(RDMA_INIT) RDMA_WRITE - RECEIVER\n");
         } else {
-            *(rdma_metadata + i) = (char *)malloc(52); // 4+1+6+1+6+1++32+1 (last one is the string terminator)
-            memset(*(rdma_metadata + i), 0, 52);
-            snprintf(*(rdma_metadata + i), 52, "%04x:%06x:%06x:%s", (*(config->local_endpoint + i))->lid, (*(config->local_endpoint + i))->qpn, (*(config->local_endpoint + i))->psn, (*(config->local_endpoint + i))->gid_string);
-            debug_print("(RDMA_SEND) local RDMA metadata for remote #%d: %s\n", i, *(rdma_metadata + i));
+            (*(config->local_endpoint + i))->rkey = 0;
+            (*(config->local_endpoint + i))->addr = 0;
+            debug_print("(RDMA_INIT) RDMA_WRITE - SENDER\n");
         }
+        *(rdma_metadata + i) = (char *)malloc(82);
+        memset(*(rdma_metadata + i), 0, 82);
+        snprintf(*(rdma_metadata + i), 82, "%06x:%06x:%08x:%016lx:%08x:%s", (*(config->local_endpoint + i))->qpn, (*(config->local_endpoint + i))->psn, (*(config->local_endpoint + i))->rkey, (*(config->local_endpoint + i))->addr, (*(config->local_endpoint + i))->size, (*(config->local_endpoint + i))->gid_string);
+        debug_print("(RDMA_INIT) local RDMA metadata for remote #%d: %s\n", i, *(rdma_metadata + i));
     }
 
     return(rdma_metadata);
@@ -377,7 +450,9 @@ rdma_connect_ctx(struct rdma_context *ctx, int port, enum ibv_mtu mtu, struct rd
             .qp_state           = IBV_QPS_RTR,
             .path_mtu           = mtu,
             .dest_qp_num        = (*(remote_endpoint + i))->qpn,
-            .rq_psn             = (*(remote_endpoint + i))->psn,
+// temporary workaround for swapped PSNs in Coyote
+//            .rq_psn             = (*(remote_endpoint + i))->psn,
+            .rq_psn             = (*(local_endpoint + i))->psn,
             .max_dest_rd_atomic	= 1,
             .min_rnr_timer      = 12,
             .ah_attr			= {
@@ -415,8 +490,11 @@ rdma_connect_ctx(struct rdma_context *ctx, int port, enum ibv_mtu mtu, struct rd
             attr.timeout        = 16;
             attr.retry_cnt      = 7;
             attr.rnr_retry      = 6;
-            attr.sq_psn         = (*(local_endpoint + i))->psn;
+// temporary workaround for swapped PSNs in Coyote
+//            attr.sq_psn         = (*(local_endpoint + i))->psn;
+            attr.sq_psn         = (*(remote_endpoint + i))->psn;
             attr.max_rd_atomic  = 1;
+            attr.path_mig_state = IBV_MIG_MIGRATED;
 
             if (ibv_modify_qp(*(ctx->qp + i), &attr,
                     IBV_QP_STATE              |
@@ -424,7 +502,8 @@ rdma_connect_ctx(struct rdma_context *ctx, int port, enum ibv_mtu mtu, struct rd
                     IBV_QP_RETRY_CNT          |
                     IBV_QP_RNR_RETRY          |
                     IBV_QP_SQ_PSN             |
-                    IBV_QP_MAX_QP_RD_ATOMIC)) {
+                    IBV_QP_MAX_QP_RD_ATOMIC   |
+                    IBV_QP_PATH_MIG_STATE)) {
                 fprintf(stderr, "rdma_connect_ctx: Failed to modify QP (#%d out of %d) to RTS\n", i + 1, count);
                 return 1;
             } else {

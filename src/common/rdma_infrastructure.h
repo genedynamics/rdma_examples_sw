@@ -63,6 +63,7 @@ struct rdma_endpoint {
     uint32_t psn;
     uint32_t rkey;
     uint64_t addr;
+    uint32_t size;
     char gid_string[32];
     union ibv_gid gid;
 };
@@ -161,6 +162,10 @@ struct rdma_config {
 int rdma_get_port_info(struct ibv_context *context, int port, struct ibv_port_attr *attr);
 void wire_gid_to_gid(const char *wgid, union ibv_gid *gid);
 void gid_to_wire_gid(const union ibv_gid *gid, char wgid[]);
+
+uint32_t readAck(int control_socket);
+void sendAck(int control_socket, uint32_t ack);
+void connSync(int control_socket, int client);
 
 char ** rdma_prepare(struct rdma_config *config, int role);
 struct rdma_context * rdma_init_ctx(struct ibv_device *ib_dev, unsigned long *message_count, unsigned long *message_size, unsigned long *buffer_size, unsigned count, int port, int role);
