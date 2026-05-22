@@ -201,7 +201,6 @@ main(int argc, char** argv)
 
     read(c, remote_receiver_rdma_metadata, 82);
     sscanf(remote_receiver_rdma_metadata, "%06x:%06x:%08x:%016lx:%08x:%s", &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->rkey), &((*(config.remote_endpoint))->addr), &((*(config.remote_endpoint))->size), &((*(config.remote_endpoint))->gid_string));
-    // (*(config.remote_endpoint))->psn = (*(config.remote_endpoint))->psn + 1;
     wire_gid_to_gid((*(config.remote_endpoint))->gid_string, &((*(config.remote_endpoint))->gid));
     (*(config.remote_endpoint))->lid = 0;
 
@@ -217,9 +216,7 @@ main(int argc, char** argv)
         exit(1);
 	}
 
-    // printf("connSync: STEP 1\n");
     connSync(c, IS_CLIENT);
-    // printf("connSync: STEP 1 - DONE\n");
 
     // char buf[32];
     // do {
@@ -233,16 +230,11 @@ main(int argc, char** argv)
         exit(1);
     }
 
-    // printf("connSync: STEP 2\n");
     connSync(c, IS_CLIENT);
-    // printf("connSync: STEP 2 - DONE\n");
 
-    // // char buf[32];
     // write(c, "DONE", 5);
 
-    // printf("connSync: STEP 3\n");
     connSync(s, IS_CLIENT);
-    // printf("connSync: STEP 3 - DONE\n");
 
     if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
         fprintf(stderr, "main: Failed to clean up before exiting.\n");

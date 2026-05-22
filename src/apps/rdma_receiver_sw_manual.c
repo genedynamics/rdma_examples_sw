@@ -152,13 +152,13 @@ main(int argc, char** argv)
 
     fprintf(stdout, "(RDMA_RECEIVER) [SECOND] remote RDMA metadata: ");
 
-    // 52 characters for the string + 1 character for the new line, otherwise the getchar() misbehaves
-    remote_sender_rdma_metadata = (char *)malloc(53);
-    memset(remote_sender_rdma_metadata, 0, 53);
+    remote_sender_rdma_metadata = (char *)malloc(82);
+    memset(remote_sender_rdma_metadata, 0, 82);
 
-    fgets(remote_sender_rdma_metadata, 53, stdin);
-    sscanf(remote_sender_rdma_metadata, "%0lx:%0lx:%0lx:%s\n", &((*(config.remote_endpoint))->lid), &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->gid_string));
+    fgets(remote_sender_rdma_metadata, 82, stdin);
+    sscanf(remote_sender_rdma_metadata, "%06x:%06x:%08x:%016lx:%08x:%s", &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->rkey), &((*(config.remote_endpoint))->addr), &((*(config.remote_endpoint))->size), &((*(config.remote_endpoint))->gid_string));
     wire_gid_to_gid((*(config.remote_endpoint))->gid_string, &((*(config.remote_endpoint))->gid));
+    (*(config.remote_endpoint))->lid = 0;
 
 	if (rdma_connect_ctx(config.rdma_ctx, 1, config.mtu, config.local_endpoint, config.remote_endpoint, config.remote_count, config.gidx, RDMA_RECEIVER)) {
         fprintf(stderr, "main:  Failed to connect to remote RDMA endpoint (provider).\n");
@@ -175,13 +175,13 @@ main(int argc, char** argv)
     // i = config.message_count - 1;
     for (i = 0; i < *(config.message_count); i++) {
         for (j = 0; j < *(config.message_size); j++) {
-        printf("%d:", *(*(config.rdma_ctx->buf) + i * *(config.message_size) + j));
+            printf("%d:", *(*(config.rdma_ctx->buf) + i * *(config.message_size) + j));
         }
     }
     printf("\nDONE\n");
     // End of data check
 
-	if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
+    if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
         fprintf(stderr, "main: Failed to clean up before exiting.\n");
 	}
 }

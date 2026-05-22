@@ -151,11 +151,16 @@ main(int argc, char** argv)
     fprintf(stdout, "(RDMA_RECEIVER) local RDMA metadata: %s\n", *local_receiver_rdma_metadata);
 
     // establish TCP/IP connection
-    int s;
+    int s, flag = 1;
     struct sockaddr_in s_in;
 
     if ((s = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         fprintf(stderr, "main: Socket initialization failed.\n");
+        exit(1);
+    }
+
+    if (-1 == setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag))) {  
+        fprintf(stderr, "main: setsockopt TCP_NODELAY failed.\n");
         exit(1);
     }
 
@@ -173,18 +178,16 @@ main(int argc, char** argv)
     }
 
     // exchange metadata
-    if (config.function == RDMA_WRITE) {
-        write(s, *local_receiver_rdma_metadata, 78);
-    } else {
-        write(s, *local_receiver_rdma_metadata, 52);
-    }
+    write(s, *local_receiver_rdma_metadata, 82);
 
-    remote_sender_rdma_metadata = (char *)malloc(52);
-    memset(remote_sender_rdma_metadata, 0, 52);
+    remote_sender_rdma_metadata = (char *)malloc(82);
+    memset(remote_sender_rdma_metadata, 0, 82);
 
-    read(s, remote_sender_rdma_metadata, 52);
-    sscanf(remote_sender_rdma_metadata, "%0lx:%0lx:%0lx:%s", &((*(config.remote_endpoint))->lid), &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->gid_string));
+    read(s, remote_sender_rdma_metadata, 82);
+
+    sscanf(remote_sender_rdma_metadata, "%06x:%06x:%08x:%016lx:%08x:%s", &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->rkey), &((*(config.remote_endpoint))->addr), &((*(config.remote_endpoint))->size), &((*(config.remote_endpoint))->gid_string));
     wire_gid_to_gid((*(config.remote_endpoint))->gid_string, &((*(config.remote_endpoint))->gid));
+    (*(config.remote_endpoint))->lid = 0;
 
     fprintf(stdout, "(RDMA_RECEIVER) [SECOND] remote RDMA metadata: %s\n", remote_sender_rdma_metadata);
 
@@ -206,13 +209,13 @@ main(int argc, char** argv)
     // i = config.message_count - 1;
     for (i = 0; i < *(config.message_count); i++) {
         for (j = 0; j < *(config.message_size); j++) {
-        printf("%d:", *(*(config.rdma_ctx->buf) + i * *(config.message_size) + j));
+            printf("%d:", *(*(config.rdma_ctx->buf) + i * *(config.message_size) + j));
         }
     }
     printf("\nDONE\n");
     // End of data check
 
-	if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
+    if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
         fprintf(stderr, "main: Failed to clean up before exiting.\n");
 	}
 }

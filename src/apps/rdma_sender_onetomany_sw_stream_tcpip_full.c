@@ -245,25 +245,17 @@ main(int argc, char** argv)
         }
 
         // exchange data
-        if (config.function == RDMA_WRITE) {
-            remote_receiver_rdma_metadata = (char *)malloc(78);
-            memset(remote_receiver_rdma_metadata, 0, 78);
+        remote_receiver_rdma_metadata = (char *)malloc(82);
+        memset(remote_receiver_rdma_metadata, 0, 82);
 
-            read(c, remote_receiver_rdma_metadata, 78);
-            sscanf(remote_receiver_rdma_metadata, "%0lx:%0lx:%0lx:%08x:%016lx:%s", &((*(config.remote_endpoint + crt_remote_count))->lid), &((*(config.remote_endpoint + crt_remote_count))->qpn), &((*(config.remote_endpoint + crt_remote_count))->psn), &((*(config.remote_endpoint + crt_remote_count))->rkey), &((*(config.remote_endpoint + crt_remote_count))->addr), &((*(config.remote_endpoint + crt_remote_count))->gid_string));
-            wire_gid_to_gid((*(config.remote_endpoint + crt_remote_count))->gid_string, &((*(config.remote_endpoint + crt_remote_count))->gid));
-        } else {
-            remote_receiver_rdma_metadata = (char *)malloc(52);
-            memset(remote_receiver_rdma_metadata, 0, 52);
-
-            read(c, remote_receiver_rdma_metadata, 52);
-            sscanf(remote_receiver_rdma_metadata, "%0lx:%0lx:%0lx:%s", &((*(config.remote_endpoint + crt_remote_count))->lid), &((*(config.remote_endpoint + crt_remote_count))->qpn), &((*(config.remote_endpoint + crt_remote_count))->psn), &((*(config.remote_endpoint + crt_remote_count))->gid_string));
-            wire_gid_to_gid((*(config.remote_endpoint + crt_remote_count))->gid_string, &((*(config.remote_endpoint + crt_remote_count))->gid));
-        }
+        read(c, remote_receiver_rdma_metadata, 82);
+        sscanf(remote_receiver_rdma_metadata, "%06x:%06x:%08x:%016lx:%08x:%s", &((*(config.remote_endpoint + crt_remote_count))->qpn), &((*(config.remote_endpoint + crt_remote_count))->psn), &((*(config.remote_endpoint + crt_remote_count))->rkey), &((*(config.remote_endpoint + crt_remote_count))->addr), &((*(config.remote_endpoint + crt_remote_count))->size), &((*(config.remote_endpoint + crt_remote_count))->gid_string));
+        wire_gid_to_gid((*(config.remote_endpoint + crt_remote_count))->gid_string, &((*(config.remote_endpoint + crt_remote_count))->gid));
+        (*(config.remote_endpoint))->lid = 0;
 
         fprintf(stdout, "(RDMA_SENDER) [FIRST] remote RDMA metadata: %s (#%d out of %d).\n", remote_receiver_rdma_metadata, crt_remote_count + 1, config.remote_count);
 
-        write(c, *(local_sender_rdma_metadata + crt_remote_count), 52);
+        write(c, *(local_sender_rdma_metadata + crt_remote_count), 82);
 
         // fprintf(stdout, "(RDMA_SENDER) [THIRD] [Press ENTER to connect to receiver, send data and then go check the receiver]");
         // getchar();

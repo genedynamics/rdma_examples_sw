@@ -134,25 +134,15 @@ main(int argc, char** argv)
     }
     fprintf(stdout, "(RDMA_SENDER) local RDMA metadata: %s\n", *local_sender_rdma_metadata);
 
+    remote_receiver_rdma_metadata = (char *)malloc(82);
+    memset(remote_receiver_rdma_metadata, 0, 82);
+
+    fgets(remote_receiver_rdma_metadata, 82, stdin);
+    sscanf(remote_receiver_rdma_metadata, "%06x:%06x:%08x:%016lx:%08x:%s", &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->rkey), &((*(config.remote_endpoint))->addr), &((*(config.remote_endpoint))->size), &((*(config.remote_endpoint))->gid_string));
+    wire_gid_to_gid((*(config.remote_endpoint))->gid_string, &((*(config.remote_endpoint))->gid));
+    (*(config.remote_endpoint))->lid = 0;
+
     fprintf(stdout, "(RDMA_SENDER) [FIRST] remote RDMA metadata: ");
-
-    if (config.function == RDMA_WRITE) {
-        // 78 characters for the string + 1 character for the new line, otherwise the getchar() misbehaves
-        remote_receiver_rdma_metadata = (char *)malloc(79);
-        memset(remote_receiver_rdma_metadata, 0, 79);
-
-        fgets(remote_receiver_rdma_metadata, 79, stdin);
-        sscanf(remote_receiver_rdma_metadata, "%0lx:%0lx:%0lx:%08x:%016lx:%s\n", &((*(config.remote_endpoint))->lid), &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->rkey), &((*(config.remote_endpoint))->addr), &((*(config.remote_endpoint))->gid_string));
-        wire_gid_to_gid((*(config.remote_endpoint))->gid_string, &((*(config.remote_endpoint))->gid));
-    } else {
-        // 52 characters for the string + 1 character for the new line, otherwise the getchar() misbehaves
-        remote_receiver_rdma_metadata = (char *)malloc(53);
-        memset(remote_receiver_rdma_metadata, 0, 53);
-
-        fgets(remote_receiver_rdma_metadata, 53, stdin);
-        sscanf(remote_receiver_rdma_metadata, "%0lx:%0lx:%0lx:%s\n", &((*(config.remote_endpoint))->lid), &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->gid_string));
-        wire_gid_to_gid((*(config.remote_endpoint))->gid_string, &((*(config.remote_endpoint))->gid));
-    }
 
     fprintf(stdout, "(RDMA_SENDER) [THIRD] [Press ENTER to connect to receiver, send data and then go check the receiver]");
     getchar();
@@ -167,7 +157,7 @@ main(int argc, char** argv)
         exit(1);
     }
 
-	if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
+    if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
         fprintf(stderr, "main: Failed to clean up before exiting.\n");
 	}
 }

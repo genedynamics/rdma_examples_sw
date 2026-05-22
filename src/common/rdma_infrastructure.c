@@ -446,12 +446,18 @@ rdma_connect_ctx(struct rdma_context *ctx, int port, enum ibv_mtu mtu, struct rd
     int i;
 
     for (i = 0; i < count; i++) {
+        printf("remote QPN: %d\n", (*(remote_endpoint + i))->qpn);
+        printf("remote PSN: %d\n", (*(remote_endpoint + i))->psn);
+        printf("remote LID: %d\n", (*(remote_endpoint + i))->lid);
+        printf("remote port: %d\n", port);
+        printf("remote DGID: %d\n", (*(remote_endpoint + i))->gid);
+        printf("SGID_INDEX: %d\n", sgid_idx);
         struct ibv_qp_attr attr = {
             .qp_state           = IBV_QPS_RTR,
             .path_mtu           = mtu,
             .dest_qp_num        = (*(remote_endpoint + i))->qpn,
 // temporary workaround for swapped PSNs in Coyote
-//            .rq_psn             = (*(remote_endpoint + i))->psn,
+            // .rq_psn             = (*(remote_endpoint + i))->psn,
             .rq_psn             = (*(local_endpoint + i))->psn,
             .max_dest_rd_atomic	= 1,
             .min_rnr_timer      = 12,
@@ -491,7 +497,7 @@ rdma_connect_ctx(struct rdma_context *ctx, int port, enum ibv_mtu mtu, struct rd
             attr.retry_cnt      = 7;
             attr.rnr_retry      = 6;
 // temporary workaround for swapped PSNs in Coyote
-//            attr.sq_psn         = (*(local_endpoint + i))->psn;
+            // attr.sq_psn         = (*(local_endpoint + i))->psn;
             attr.sq_psn         = (*(remote_endpoint + i))->psn;
             attr.max_rd_atomic  = 1;
             attr.path_mig_state = IBV_MIG_MIGRATED;

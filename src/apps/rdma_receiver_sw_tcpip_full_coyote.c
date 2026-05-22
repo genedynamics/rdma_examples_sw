@@ -175,7 +175,6 @@ main(int argc, char** argv)
         exit(1);
     }
 
-    // printf("socket prepared\n");
     bzero(&s_in, sizeof(s_in));
     s_in.sin_family = AF_INET;
     s_in.sin_addr.s_addr=inet_addr(config.remote_hostname);
@@ -188,17 +187,14 @@ main(int argc, char** argv)
     } else {
         fprintf(stdout, "main: Connected to the server.\n");
     }
-    // printf("socket connected\n");
 
     // exchange metadata
     write(s, *local_receiver_rdma_metadata, 82);
-    // printf("sent local_receiver_rdma_metadata\n");
 
     remote_sender_rdma_metadata = (char *)malloc(82);
     memset(remote_sender_rdma_metadata, 0, 82);
 
     read(s, remote_sender_rdma_metadata, 82);
-    // printf("received remote_sender_rdma_metadata\n");
 
     sscanf(remote_sender_rdma_metadata, "%06x:%06x:%08x:%016lx:%08x:%s", &((*(config.remote_endpoint))->qpn), &((*(config.remote_endpoint))->psn), &((*(config.remote_endpoint))->rkey), &((*(config.remote_endpoint))->addr), &((*(config.remote_endpoint))->size), &((*(config.remote_endpoint))->gid_string));
     wire_gid_to_gid((*(config.remote_endpoint))->gid_string, &((*(config.remote_endpoint))->gid));
@@ -214,9 +210,7 @@ main(int argc, char** argv)
         exit(1);
 	}
 
-    // printf("connSync: STEP 1\n");
     connSync(s, IS_CLIENT);
-    // printf("connSync: STEP 1 - DONE\n");
 
     // write(s, "GO", 32);
 
@@ -229,9 +223,7 @@ main(int argc, char** argv)
     //     read(s, buf, 32);
     // } while (strcmp(buf, "DONE") != 0);
 
-    // printf("connSync: STEP 2\n");
     connSync(s, IS_CLIENT);
-    // printf("connSync: STEP 2 - DONE\n");
 
     // Print data in the reserved memory at the end of the write
     int i, j;
@@ -246,9 +238,7 @@ main(int argc, char** argv)
     printf("\nDONE\n");
     // End of data check
 
-    // printf("connSync: STEP 3\n");
     connSync(s, IS_CLIENT);
-    // printf("connSync: STEP 3 - DONE\n");
 
     if (rdma_close_ctx(config.rdma_ctx, config.remote_count)) {
         fprintf(stderr, "main: Failed to clean up before exiting.\n");
